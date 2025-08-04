@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Barcode Scanner POC</title>
+  <style>
+    #video {
+      width: 320px;
+      height: 240px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Barcode Scanner POC</h1>
+  <input id="barcode" type="text" placeholder="Scanned code will appear here" />
+  <button id="start-scan">Start Scan</button>
+  <video id="video" autoplay muted playsinline></video>
+  <script>
+    const startBtn = document.getElementById('start-scan');
+    const barcodeInput = document.getElementById('barcode');
+    const video = document.getElementById('video');
+
+    async function startScan() {
+      if (!('BarcodeDetector' in window)) {
+        alert('Barcode Detector not supported on this browser');
+        return;
+      }
+      const detector = new BarcodeDetector({ formats: ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      const track = stream.getVideoTracks()[0];
+      const scan = async () => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0) {
+              barcodeInput.value = barcodes[0].rawValue;
+              track.stop();
+              return;
+            }
+          } catch (err) {
+            console.error('Detection error', err);
+          }
+        }
+        requestAnimationFrame(scan);
+      };
+      scan();
+    }
+
+    startBtn.addEventListener('click', startScan);
+  </script>
+</body>
+</html>
